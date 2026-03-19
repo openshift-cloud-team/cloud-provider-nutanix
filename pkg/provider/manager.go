@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"sort"
 	"strings"
 
 	convergedV4 "github.com/nutanix-cloud-native/prism-go-client/converged/v4"
@@ -123,15 +124,17 @@ func (n *nutanixManager) getInstanceMetadata(ctx context.Context, node *v1.Node)
 		return nil, err
 	}
 
-	providerID, err := n.generateProviderID(ctx, vmUUID)
-	if err != nil {
-		return nil, err
-	}
 	nClient, err := n.nutanixClient.Get()
 	if err != nil {
 		return nil, err
 	}
 	vm, err := nClient.GetVM(ctx, vmUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate providerID from VM (checks customAttributes first, then falls back to vmUUID)
+	providerID, err := n.generateProviderIDFromVM(ctx, vm)
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +325,39 @@ func (n *nutanixManager) generateProviderID(ctx context.Context, vmUUID string) 
 	return fmt.Sprintf("%s://%s", constants.ProviderName, strings.ToLower(vmUUID)), nil
 }
 
+// generateProviderIDFromVM generates the providerID for a node from the VM object.
+// It first checks if the VM's customAttributes field has "providerID:<UUID>".
+// If yes, it uses this UUID value to set the providerID.
+// If not, it falls back to using the vmUUID (backward compatible).
+func (n *nutanixManager) generateProviderIDFromVM(ctx context.Context, vm *vmmModels.Vm) (string, error) {
+	if vm == nil {
+		return "", fmt.Errorf("VM cannot be nil when generating nutanix provider ID for node")
+	}
+
+	// Check if customAttributes contains providerID
+	if vm.CustomAttributes != nil {
+		for _, attr := range vm.CustomAttributes {
+			// customAttributes are in the format "key:value"
+			parts := strings.SplitN(attr, ":", 2)
+			if len(parts) == 2 && strings.ToLower(strings.TrimSpace(parts[0])) == "providerid" {
+				customProviderID := strings.TrimSpace(parts[1])
+				if customProviderID != "" {
+					klog.V(2).Infof("Using custom providerID from customAttributes: %s", customProviderID) //nolint:typecheck
+					return fmt.Sprintf("%s://%s", constants.ProviderName, customProviderID), nil
+				}
+			}
+		}
+	}
+
+	// Fallback to using vmUUID
+	if vm.ExtId == nil || *vm.ExtId == "" {
+		return "", fmt.Errorf("VM ExtId cannot be empty when generating nutanix provider ID for node")
+	}
+
+	klog.V(2).Infof("Using VM ExtId as providerID: %s", *vm.ExtId) //nolint:typecheck
+	return fmt.Sprintf("%s://%s", constants.ProviderName, strings.ToLower(*vm.ExtId)), nil
+}
+
 func (n *nutanixManager) isNodeAddressesSet(node *v1.Node) bool {
 	if node == nil {
 		return false
@@ -344,8 +380,8 @@ func (n *nutanixManager) isNodeAddressesSet(node *v1.Node) bool {
 }
 
 func (n *nutanixManager) getNodeAddresses(_ context.Context, vm *vmmModels.Vm) ([]v1.NodeAddress, error) {
-	var addressSet *set.Set[v1.NodeAddress]
 	var addresses []v1.NodeAddress
+	uniqueIPs := set.New[string](0)
 
 	if vm == nil {
 		return nil, fmt.Errorf("vm cannot be nil when getting node addresses")
@@ -355,36 +391,48 @@ func (n *nutanixManager) getNodeAddresses(_ context.Context, vm *vmmModels.Vm) (
 		return nil, fmt.Errorf("unable to determine network interfaces from VM with UUID %s: vm has no nics", *vm.ExtId)
 	}
 
-	addressSet = set.From([]v1.NodeAddress{}) //nolint:typecheck
 	for _, nic := range vm.Nics {
 		if nic.NicNetworkInfo == nil {
 			continue
 		}
 
+		var vmAddresses []v1.NodeAddress
+		var err error
 		switch nic.NicNetworkInfo.GetValue().(type) {
 		case vmmModels.VirtualEthernetNicNetworkInfo:
 			netInfo := nic.NicNetworkInfo.GetValue().(vmmModels.VirtualEthernetNicNetworkInfo)
-			vmAddressSet, err := n.getNodeAddressesFromNicNetworkInfo(netInfo.Ipv4Config, netInfo.Ipv4Info)
+
+			vmAddresses, err = n.getNodeAddressesFromNicNetworkInfo(netInfo.Ipv4Config, netInfo.Ipv4Info)
 			if err != nil {
 				return nil, err
 			}
-			addressSet.InsertSlice(vmAddressSet)
 
 		case vmmModels.DpOffloadNicNetworkInfo:
 			netInfo := nic.NicNetworkInfo.GetValue().(vmmModels.DpOffloadNicNetworkInfo)
-			vmAddressSet, err := n.getNodeAddressesFromNicNetworkInfo(netInfo.Ipv4Config, netInfo.Ipv4Info)
+			vmAddresses, err = n.getNodeAddressesFromNicNetworkInfo(netInfo.Ipv4Config, netInfo.Ipv4Info)
 			if err != nil {
 				return nil, err
 			}
-			addressSet.InsertSlice(vmAddressSet)
 
 		default:
 			klog.V(1).Infof("unsupported NIC network info type: %T", nic.NicNetworkInfo.GetValue()) //nolint:typecheck
 			continue
 		}
-	}
 
-	addresses = append(addresses, addressSet.Slice()...)
+		// At this point, every NIC has no duplicates in its own set of addresses.
+		// However, there can be duplicates across the sets of addresses of different NICs,
+		// so we ignore the duplicates.
+		for _, addr := range vmAddresses {
+			if addr.Type != v1.NodeInternalIP {
+				addresses = append(addresses, addr)
+				continue
+			}
+			if !uniqueIPs.Contains(addr.Address) {
+				uniqueIPs.Insert(addr.Address)
+				addresses = append(addresses, addr)
+			}
+		}
+	}
 
 	if len(addresses) == 0 {
 		return addresses, fmt.Errorf("unable to determine network interfaces from VM with UUID %s", *vm.ExtId)
@@ -451,7 +499,14 @@ func (n *nutanixManager) getNodeAddressesFromNicNetworkInfo(ipv4Config *vmmModel
 			}
 		}
 	}
-	return addressSet.Slice(), nil
+
+	// Callers rely on the order of the addresses, so we sort them to ensure consistency.
+	addresses := addressSet.Slice()
+	sort.Slice(addresses, func(i, j int) bool {
+		return addresses[i].Address < addresses[j].Address
+	})
+
+	return addresses, nil
 }
 
 func (n *nutanixManager) stripNutanixIDFromProviderID(providerID string) string {

@@ -39,7 +39,7 @@ func (api *VcenterExtensionsApi) GetVcenterExtensionById(extId *string, args ...
 		argMap = args[0]
 	}
 
-	uri := "/api/clustermgmt/v4.1/config/vcenter-extensions/{extId}"
+	uri := "/api/clustermgmt/v4.2/config/vcenter-extensions/{extId}"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -70,7 +70,7 @@ func (api *VcenterExtensionsApi) GetVcenterExtensionById(extId *string, args ...
 		}
 	}
 
-	authNames := []string{"apiKeyAuthScheme", "basicAuthScheme"}
+	authNames := []string{"basicAuthScheme"}
 
 	apiClientResponse, err := api.ApiClient.CallApi(&uri, http.MethodGet, nil, queryParams, headerParams, formParams, accepts, contentTypes, authNames)
 	if nil != err || nil == apiClientResponse {
@@ -89,7 +89,7 @@ func (api *VcenterExtensionsApi) ListVcenterExtensions(page_ *int, limit_ *int, 
 		argMap = args[0]
 	}
 
-	uri := "/api/clustermgmt/v4.1/config/vcenter-extensions"
+	uri := "/api/clustermgmt/v4.2/config/vcenter-extensions"
 
 	headerParams := make(map[string]string)
 	queryParams := url.Values{}
@@ -126,7 +126,7 @@ func (api *VcenterExtensionsApi) ListVcenterExtensions(page_ *int, limit_ *int, 
 		}
 	}
 
-	authNames := []string{"apiKeyAuthScheme", "basicAuthScheme"}
+	authNames := []string{"basicAuthScheme"}
 
 	apiClientResponse, err := api.ApiClient.CallApi(&uri, http.MethodGet, nil, queryParams, headerParams, formParams, accepts, contentTypes, authNames)
 	if nil != err || nil == apiClientResponse {
@@ -145,7 +145,7 @@ func (api *VcenterExtensionsApi) RegisterVcenterExtension(extId *string, body *i
 		argMap = args[0]
 	}
 
-	uri := "/api/clustermgmt/v4.1/config/vcenter-extensions/{extId}/$actions/register"
+	uri := "/api/clustermgmt/v4.2/config/vcenter-extensions/{extId}/$actions/register"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -180,7 +180,7 @@ func (api *VcenterExtensionsApi) RegisterVcenterExtension(extId *string, body *i
 		}
 	}
 
-	authNames := []string{"apiKeyAuthScheme", "basicAuthScheme"}
+	authNames := []string{"basicAuthScheme"}
 
 	apiClientResponse, err := api.ApiClient.CallApi(&uri, http.MethodPost, body, queryParams, headerParams, formParams, accepts, contentTypes, authNames)
 	if nil != err || nil == apiClientResponse {
@@ -199,7 +199,7 @@ func (api *VcenterExtensionsApi) UnregisterVcenterExtension(extId *string, body 
 		argMap = args[0]
 	}
 
-	uri := "/api/clustermgmt/v4.1/config/vcenter-extensions/{extId}/$actions/unregister"
+	uri := "/api/clustermgmt/v4.2/config/vcenter-extensions/{extId}/$actions/unregister"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -234,7 +234,7 @@ func (api *VcenterExtensionsApi) UnregisterVcenterExtension(extId *string, body 
 		}
 	}
 
-	authNames := []string{"apiKeyAuthScheme", "basicAuthScheme"}
+	authNames := []string{"basicAuthScheme"}
 
 	apiClientResponse, err := api.ApiClient.CallApi(&uri, http.MethodPost, body, queryParams, headerParams, formParams, accepts, contentTypes, authNames)
 	if nil != err || nil == apiClientResponse {

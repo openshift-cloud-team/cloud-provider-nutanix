@@ -39,7 +39,7 @@ func (api *VmRecoveryPointsApi) CreateVmRecoveryPoint(body *import10.VmRecoveryP
 		argMap = args[0]
 	}
 
-	uri := "/api/vmm/v4.1/ahv/config/vm-recovery-points"
+	uri := "/api/vmm/v4.2/ahv/config/vm-recovery-points"
 
 	// verify the required parameter 'body' is set
 	if nil == body {
@@ -87,7 +87,7 @@ func (api *VmRecoveryPointsApi) DeleteVmRecoveryPointByExtId(extId *string, args
 		argMap = args[0]
 	}
 
-	uri := "/api/vmm/v4.1/ahv/config/vm-recovery-points/{extId}"
+	uri := "/api/vmm/v4.2/ahv/config/vm-recovery-points/{extId}"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -137,7 +137,7 @@ func (api *VmRecoveryPointsApi) GetVmRecoveryPointByExtId(extId *string, args ..
 		argMap = args[0]
 	}
 
-	uri := "/api/vmm/v4.1/ahv/config/vm-recovery-points/{extId}"
+	uri := "/api/vmm/v4.2/ahv/config/vm-recovery-points/{extId}"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -187,7 +187,7 @@ func (api *VmRecoveryPointsApi) ListVmRecoveryPoints(page_ *int, limit_ *int, fi
 		argMap = args[0]
 	}
 
-	uri := "/api/vmm/v4.1/ahv/config/vm-recovery-points"
+	uri := "/api/vmm/v4.2/ahv/config/vm-recovery-points"
 
 	headerParams := make(map[string]string)
 	queryParams := url.Values{}
@@ -246,7 +246,7 @@ func (api *VmRecoveryPointsApi) RestoreVmRecoveryPoint(extId *string, body *impo
 		argMap = args[0]
 	}
 
-	uri := "/api/vmm/v4.1/ahv/config/vm-recovery-points/{extId}/$actions/restore"
+	uri := "/api/vmm/v4.2/ahv/config/vm-recovery-points/{extId}/$actions/restore"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {

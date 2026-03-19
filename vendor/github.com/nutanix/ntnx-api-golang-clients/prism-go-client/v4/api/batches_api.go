@@ -39,7 +39,7 @@ func (api *BatchesApi) GetBatchById(extId *string, args ...map[string]interface{
 		argMap = args[0]
 	}
 
-	uri := "/api/prism/v4.1/operations/batches/{extId}"
+	uri := "/api/prism/v4.2/operations/batches/{extId}"
 
 	// verify the required parameter 'extId' is set
 	if nil == extId {
@@ -89,7 +89,7 @@ func (api *BatchesApi) ListBatches(page_ *int, limit_ *int, filter_ *string, ord
 		argMap = args[0]
 	}
 
-	uri := "/api/prism/v4.1/operations/batches"
+	uri := "/api/prism/v4.2/operations/batches"
 
 	headerParams := make(map[string]string)
 	queryParams := url.Values{}
@@ -148,7 +148,7 @@ func (api *BatchesApi) SubmitBatch(body *import1.BatchSpec, args ...map[string]i
 		argMap = args[0]
 	}
 
-	uri := "/api/prism/v4.1/operations/$actions/batch"
+	uri := "/api/prism/v4.2/operations/$actions/batch"
 
 	// verify the required parameter 'body' is set
 	if nil == body {
